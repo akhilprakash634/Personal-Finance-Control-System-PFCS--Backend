@@ -2,7 +2,7 @@ version: '3.8'
 
 networks:
   pfcs-network:
-    name: pfcs-network
+    external: true
 
 services:
   backend:
