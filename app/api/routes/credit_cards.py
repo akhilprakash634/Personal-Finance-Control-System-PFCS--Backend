@@ -8,7 +8,7 @@ from app.models.user import User
 from app.schemas.credit_card import CreditCard as CreditCardSchema, CreditCardCreate
 from app.core.security import get_current_user
 
-router = APIRouter(prefix="/credit_cards", tags=["credit_cards"])
+router = APIRouter(prefix="/credit-cards", tags=["credit-cards"])
 
 @router.get("/", response_model=List[CreditCardSchema])
 def get_credit_cards(

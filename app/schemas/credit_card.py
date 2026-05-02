@@ -5,6 +5,7 @@ class CreditCardBase(BaseModel):
     limit: float
     used_amount: float
     available_limit: float
+    current_month_bill: float
     interest_rate: float
     minimum_due: float
     billing_date: int

@@ -11,6 +11,7 @@ class CreditCard(Base):
     limit = Column(Float, default=0.0)
     used_amount = Column(Float, default=0.0)
     available_limit = Column(Float, default=0.0)
+    current_month_bill = Column(Float, default=0.0)
     interest_rate = Column(Float, default=0.0)
     minimum_due = Column(Float, default=0.0)
     billing_date = Column(Integer) # Day of the month
