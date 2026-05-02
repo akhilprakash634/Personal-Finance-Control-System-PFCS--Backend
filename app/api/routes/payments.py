@@ -43,15 +43,24 @@ def create_payment(
     # 2. Calculate interest/principal split
     split = calculate_payment_split(payment.debt_type, debt, payment.amount)
     
-    # 3. Update the debt balance
+    # 3. Update the debt balance and paid count
     if payment.debt_type == "loan":
         debt.remaining_amount -= split["principal"]
+        # Increment EMIs paid if it's a regular EMI payment
+        if payment.payment_type == "emi":
+            debt.emis_paid = (debt.emis_paid or 0) + 1
+        
         if debt.remaining_amount <= 0:
             debt.remaining_amount = 0
             debt.status = "closed"
             debt.closed_date = datetime.now()
+            
     elif payment.debt_type == "credit_card_loan":
         debt.remaining_amount -= split["principal"]
+        # Increment EMIs paid if it's a regular EMI payment
+        if payment.payment_type == "emi":
+            debt.emis_paid = (debt.emis_paid or 0) + 1
+            
         if debt.remaining_amount <= 0:
             debt.remaining_amount = 0
             debt.status = "closed"

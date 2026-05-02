@@ -28,3 +28,35 @@ def create_loan(
     db.commit()
     db.refresh(db_loan)
     return db_loan
+
+@router.put("/{loan_id}", response_model=LoanSchema)
+def update_loan(
+    loan_id: int,
+    loan_update: LoanCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_loan = db.query(Loan).filter(Loan.id == loan_id, Loan.user_id == current_user.id).first()
+    if not db_loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    for key, value in loan_update.dict().items():
+        setattr(db_loan, key, value)
+    
+    db.commit()
+    db.refresh(db_loan)
+    return db_loan
+
+@router.delete("/{loan_id}")
+def delete_loan(
+    loan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_loan = db.query(Loan).filter(Loan.id == loan_id, Loan.user_id == current_user.id).first()
+    if not db_loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    
+    db.delete(db_loan)
+    db.commit()
+    return {"message": "Loan deleted"}
