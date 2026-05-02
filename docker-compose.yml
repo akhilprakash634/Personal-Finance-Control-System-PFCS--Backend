@@ -1,5 +1,9 @@
 version: '3.8'
 
+networks:
+  pfcs-network:
+    name: pfcs-network
+
 services:
   backend:
     build: .
@@ -7,4 +11,6 @@ services:
     ports:
       - "8001:8000"
     env_file: .env
+    networks:
+      - pfcs-network
     restart: always

@@ -29,6 +29,8 @@ jobs:
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
             cd ~/Personal-Finance-Control-System-PFCS/backend
+            # Create shared network if it doesn't exist
+            sudo docker network create pfcs-network || true
             # Copy secrets from the server's secret folder
             cp ~/secret/backend/.env .env
             # Build and Restart
