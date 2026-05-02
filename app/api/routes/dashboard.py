@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from app.db.session import get_db
 from app.models.account import Account
@@ -12,6 +12,8 @@ from pydantic import BaseModel
 from app.services.finance_engine import create_dashboard
 from app.core.security import get_current_user
 
+from app.models.credit_card_loan import CreditCardLoan
+
 class Summary(BaseModel):
     total_balance: float
     total_debt: float
@@ -21,9 +23,10 @@ class MonthlyRequirement(BaseModel):
     total_required: float
     loan_emi_total: float
     credit_min_due_total: float
+    credit_card_loan_emi_total: float
 
 class StrategyStep(BaseModel):
-    focus: str
+    focus: Optional[str]
     reason: str
     steps: List[str]
 
@@ -50,7 +53,8 @@ def get_dashboard(
     accounts = db.query(Account).filter(Account.user_id == current_user.id).all()
     loans = db.query(Loan).filter(Loan.user_id == current_user.id).all()
     credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id).all()
+    cc_loans = db.query(CreditCardLoan).filter(CreditCardLoan.user_id == current_user.id).all()
     payments = db.query(Payment).filter(Payment.user_id == current_user.id).all()
     
-    dashboard_data = create_dashboard(accounts, loans, credit_cards, payments)
+    dashboard_data = create_dashboard(accounts, loans, credit_cards, cc_loans, payments)
     return dashboard_data

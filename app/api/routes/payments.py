@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.models.payment import Payment
 from app.models.loan import Loan
 from app.models.credit_card import CreditCard
+from app.models.credit_card_loan import CreditCardLoan
 from app.models.user import User
 from app.schemas.payment import Payment as PaymentSchema, PaymentCreate
 from app.services.finance_engine import calculate_payment_split
@@ -33,6 +34,8 @@ def create_payment(
         debt = db.query(Loan).filter(Loan.id == payment.debt_id, Loan.user_id == current_user.id).first()
     elif payment.debt_type == "credit_card":
         debt = db.query(CreditCard).filter(CreditCard.id == payment.debt_id, CreditCard.user_id == current_user.id).first()
+    elif payment.debt_type == "credit_card_loan":
+        debt = db.query(CreditCardLoan).filter(CreditCardLoan.id == payment.debt_id, CreditCardLoan.user_id == current_user.id).first()
     
     if not debt:
         raise HTTPException(status_code=404, detail=f"{payment.debt_type} not found or access denied")
@@ -47,7 +50,13 @@ def create_payment(
             debt.remaining_amount = 0
             debt.status = "closed"
             debt.closed_date = datetime.now()
+    elif payment.debt_type == "credit_card_loan":
+        debt.remaining_amount -= split["principal"]
+        if debt.remaining_amount <= 0:
+            debt.remaining_amount = 0
+            debt.status = "closed"
     else: # credit_card
+        # For cards, reduce used_amount
         debt.used_amount -= split["principal"]
         if debt.used_amount < 0:
             debt.used_amount = 0

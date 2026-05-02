@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import accounts, loans, credit_cards, dashboard, payments, auth
+from app.api.routes import accounts, loans, credit_cards, credit_card_loans, dashboard, payments, auth
 from app.db.session import engine
 from app.db.base import Base
 
@@ -26,6 +26,7 @@ app.include_router(auth.router)
 app.include_router(accounts.router)
 app.include_router(loans.router)
 app.include_router(credit_cards.router)
+app.include_router(credit_card_loans.router)
 app.include_router(dashboard.router)
 app.include_router(payments.router)
 

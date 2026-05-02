@@ -10,9 +10,11 @@ class CreditCard(Base):
     name = Column(String, index=True)
     limit = Column(Float, default=0.0)
     used_amount = Column(Float, default=0.0)
+    available_limit = Column(Float, default=0.0)
     interest_rate = Column(Float, default=0.0)
     minimum_due = Column(Float, default=0.0)
     billing_date = Column(Integer) # Day of the month
     due_date = Column(Integer) # Day of the month
 
     user = relationship("User")
+    loans = relationship("CreditCardLoan", back_populates="card")

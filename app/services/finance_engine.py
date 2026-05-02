@@ -1,12 +1,16 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-def calculate_summary(accounts: List[Any], loans: List[Any], credit_cards: List[Any]) -> Dict[str, float]:
+def calculate_summary(accounts: List[Any], loans: List[Any], credit_cards: List[Any], cc_loans: List[Any]) -> Dict[str, float]:
     active_loans = [loan for loan in loans if getattr(loan, 'status', 'active') == 'active']
+    active_cc_loans = [l for l in cc_loans if getattr(l, 'status', 'active') == 'active']
+    
     total_balance = sum(account.balance for account in accounts) if accounts else 0.0
     total_debt_loans = sum(loan.remaining_amount for loan in active_loans) if active_loans else 0.0
     total_debt_cards = sum(card.used_amount for card in credit_cards) if credit_cards else 0.0
-    total_debt = total_debt_loans + total_debt_cards
+    total_debt_cc_loans = sum(l.remaining_amount for l in active_cc_loans) if active_cc_loans else 0.0
+    
+    total_debt = total_debt_loans + total_debt_cards + total_debt_cc_loans
     net_worth = total_balance - total_debt
     
     return {
@@ -15,37 +19,30 @@ def calculate_summary(accounts: List[Any], loans: List[Any], credit_cards: List[
         "net_worth": net_worth
     }
 
-def calculate_monthly_requirement(loans: List[Any], credit_cards: List[Any]) -> Dict[str, float]:
+def calculate_monthly_requirement(loans: List[Any], credit_cards: List[Any], cc_loans: List[Any]) -> Dict[str, float]:
     active_loans = [loan for loan in loans if getattr(loan, 'status', 'active') == 'active']
+    active_cc_loans = [l for l in cc_loans if getattr(l, 'status', 'active') == 'active']
+    
     loan_emi_total = sum(loan.emi for loan in active_loans) if active_loans else 0.0
     credit_min_due_total = sum(card.minimum_due for card in credit_cards) if credit_cards else 0.0
-    total_required = loan_emi_total + credit_min_due_total
+    credit_card_loan_emi_total = sum(l.emi for l in active_cc_loans) if active_cc_loans else 0.0
+    
+    total_required = loan_emi_total + credit_min_due_total + credit_card_loan_emi_total
     
     return {
-        "total_required": total_required,
-        "loan_emi_total": loan_emi_total,
-        "credit_min_due_total": credit_min_due_total
+        "total_required": round(total_required, 2),
+        "loan_emi_total": round(loan_emi_total, 2),
+        "credit_min_due_total": round(credit_min_due_total, 2),
+        "credit_card_loan_emi_total": round(credit_card_loan_emi_total, 2)
     }
 
-def normalize_debts(loans: List[Any], credit_cards: List[Any]) -> List[Dict[str, Any]]:
+def normalize_debts(loans: List[Any], credit_cards: List[Any], cc_loans: List[Any]) -> List[Dict[str, Any]]:
     debts = []
-    active_loans = [loan for loan in loans if getattr(loan, 'status', 'active') == 'active']
-    if active_loans:
-        for loan in active_loans:
-            if loan.remaining_amount > 0:
-                priority_bonus = 0
-                if getattr(loan, 'loan_category', 'personal') == 'paylater':
-                    priority_bonus = 10
-                
-                debts.append({
-                    "id": loan.id,
-                    "name": loan.name,
-                    "type": "loan",
-                    "balance": loan.remaining_amount,
-                    "interest": loan.interest_rate,
-                    "min_payment": loan.emi,
-                    "priority": loan.interest_rate + priority_bonus
-                })
+    
+    # Priority logic: 
+    # CC Swipes (Highest) > PayLater/CC Loans (High) > Personal Loans (Normal)
+    
+    # 1. Credit Cards (Highest Priority)
     if credit_cards:
         for card in credit_cards:
             if card.used_amount > 0:
@@ -56,111 +53,120 @@ def normalize_debts(loans: List[Any], credit_cards: List[Any]) -> List[Dict[str,
                     "balance": card.used_amount,
                     "interest": card.interest_rate,
                     "min_payment": card.minimum_due,
-                    "priority": card.interest_rate
+                    "priority": card.interest_rate + 50  # Base bonus for CC swipes
                 })
+                
+    # 2. CC Loans / PayLater (High Priority)
+    active_cc_loans = [l for l in cc_loans if getattr(l, 'status', 'active') == 'active']
+    if active_cc_loans:
+        for l in active_cc_loans:
+            if l.remaining_amount > 0:
+                debts.append({
+                    "id": l.id,
+                    "name": l.name,
+                    "type": "credit_card_loan",
+                    "balance": l.remaining_amount,
+                    "interest": l.interest_rate,
+                    "min_payment": l.emi,
+                    "priority": l.interest_rate + 25 # High priority for EMIs
+                })
+                
+    # 3. Regular Loans (Normal Priority)
+    active_loans = [loan for loan in loans if getattr(loan, 'status', 'active') == 'active']
+    if active_loans:
+        for loan in active_loans:
+            if loan.remaining_amount > 0:
+                priority_bonus = 0
+                if getattr(loan, 'loan_category', 'personal') == 'paylater':
+                    priority_bonus = 25
+                
+                debts.append({
+                    "id": loan.id,
+                    "name": loan.name,
+                    "type": "loan",
+                    "balance": loan.remaining_amount,
+                    "interest": loan.interest_rate,
+                    "min_payment": loan.emi,
+                    "priority": loan.interest_rate + priority_bonus
+                })
+                
     return debts
 
-def generate_strategy(debts: List[Dict[str, Any]], method: str = "avalanche") -> Dict[str, Any]:
-    if not debts:
-        return {"focus": None, "ordered_debts": []}
-        
-    if method == "avalanche":
-        ordered_debts = sorted(debts, key=lambda x: x["priority"], reverse=True)
-    elif method == "snowball":
-        ordered_debts = sorted(debts, key=lambda x: x["balance"], reverse=False)
-    else:
-        ordered_debts = debts
-
-    focus_debt = ordered_debts[0] if ordered_debts else None
-    
-    return {
-        "focus": focus_debt,
-        "ordered_debts": ordered_debts
-    }
-
 def generate_action_plan(debts: List[Dict[str, Any]], extra_payment: float = 0.0) -> Dict[str, Any]:
-    strategy = generate_strategy(debts, method="avalanche")
-    focus_debt = strategy["focus"]
-    ordered_debts = strategy["ordered_debts"]
-    
-    if not focus_debt:
+    if not debts:
         return {
             "focus": "No debts to focus on.",
             "reason": "You are debt-free or have no active debts recorded.",
             "steps": ["Enjoy your debt-free life!"]
         }
+        
+    # Always prioritize highest priority score
+    ordered_debts = sorted(debts, key=lambda x: x["priority"], reverse=True)
+    focus_debt = ordered_debts[0]
     
-    steps = ["Pay minimum on all debts."]
+    steps = ["Pay all minimum requirements first."]
+    if focus_debt['type'] == 'credit_card':
+        steps.append(f"Clear the ₹{focus_debt['balance']} balance on {focus_debt['name']} as it has the highest priority/interest.")
+    else:
+        steps.append(f"Focus on {focus_debt['name']} to reduce the overall debt burden faster.")
+        
     if extra_payment > 0:
         steps.append(f"Add extra payment of ₹{extra_payment} to {focus_debt['name']}.")
-    else:
-        steps.append(f"Focus any additional funds you get towards {focus_debt['name']}.")
-    steps.append("Once the focus debt is cleared, move its total payment to the next debt.")
     
     return {
         "focus": focus_debt['name'],
-        "reason": f"Targeting {focus_debt['name']} first saves the most money on interest (Avalanche method).",
+        "reason": f"Targeting {focus_debt['name']} first based on debt type priority and interest savings.",
         "steps": steps
     }
 
-def estimate_payoff(debt: Dict[str, Any], extra_payment: float) -> float:
-    total_payment = debt["min_payment"] + extra_payment
-    if total_payment <= 0:
-        return -1 # Never pays off
-    return debt["balance"] / total_payment
-
-def generate_alerts(loans: List[Any], credit_cards: List[Any]) -> List[str]:
+def generate_alerts(loans: List[Any], credit_cards: List[Any], cc_loans: List[Any]) -> List[str]:
     alerts = []
     active_loans = [loan for loan in loans if getattr(loan, 'status', 'active') == 'active']
+    active_cc_loans = [l for l in cc_loans if getattr(l, 'status', 'active') == 'active']
     
     if credit_cards:
         for card in credit_cards:
             if card.limit > 0:
                 utilization = (card.used_amount / card.limit) * 100
-                if utilization > 40:
+                if utilization > 30:
                     alerts.append(f"High credit utilization ({utilization:.1f}%) on {card.name}.")
-            if card.interest_rate > 30:
-                alerts.append(f"Very high interest rate ({card.interest_rate}%) on {card.name}. Consider balance transfer.")
+            if card.interest_rate > 35:
+                alerts.append(f"High interest debt detected on {card.name} ({card.interest_rate}%).")
                 
-    if active_loans:
-        for loan in active_loans:
-            if loan.interest_rate > 30:
-                alerts.append(f"Very high interest rate ({loan.interest_rate}%) on {loan.name}.")
-                
-    total_debts_count = (len(active_loans) if active_loans else 0) + (len(credit_cards) if credit_cards else 0)
-    if total_debts_count > 5:
-        alerts.append("You have many active debt accounts. Consider consolidating them to simplify payments.")
-        
+    if active_cc_loans:
+        alerts.append(f"Hidden EMI debt detected: You have {len(active_cc_loans)} active credit card EMIs.")
+        for l in active_cc_loans:
+            if l.interest_rate > 35:
+                alerts.append(f"High interest EMI detected: {l.name} ({l.interest_rate}%).")
+
     return alerts
 
 def calculate_payment_split(debt_type: str, debt: Any, amount: float) -> Dict[str, float]:
     """
     Calculates interest and principal components of a payment.
     """
+    interest_rate = debt.interest_rate
+    interest_type = getattr(debt, 'interest_type', 'yearly')
+    
     if debt_type == "loan":
-        interest_rate = debt.interest_rate
-        interest_type = getattr(debt, 'interest_type', 'yearly')
         balance = debt.remaining_amount
-        
-        if interest_type == "yearly":
-            monthly_rate = (interest_rate / 100) / 12
-        else:
-            monthly_rate = (interest_rate / 100)
-            
-        interest_component = balance * monthly_rate
+    elif debt_type == "credit_card_loan":
+        balance = debt.remaining_amount
     else: # credit_card
-        interest_rate = debt.interest_rate
         balance = debt.used_amount
-        # Credit cards are almost always yearly interest
-        monthly_rate = (interest_rate / 100) / 12
-        interest_component = balance * monthly_rate
+        interest_type = "yearly" # Cards are always yearly
         
+    if interest_type == "yearly":
+        monthly_rate = (interest_rate / 100) / 12
+    else: # monthly
+        monthly_rate = (interest_rate / 100)
+        
+    interest_component = balance * monthly_rate
     principal_component = amount - interest_component
     
-    # Ensure principal doesn't exceed amount or make balance negative
+    # Validation
     if principal_component < 0:
         principal_component = 0.0
-        
     if principal_component > balance:
         principal_component = balance
         
@@ -169,16 +175,17 @@ def calculate_payment_split(debt_type: str, debt: Any, amount: float) -> Dict[st
         "principal": round(principal_component, 2)
     }
 
-def create_dashboard(accounts: List[Any], loans: List[Any], credit_cards: List[Any], payments: List[Any] = None) -> Dict[str, Any]:
+def create_dashboard(accounts: List[Any], loans: List[Any], credit_cards: List[Any], cc_loans: List[Any], payments: List[Any] = None) -> Dict[str, Any]:
     active_loans = [loan for loan in loans if getattr(loan, 'status', 'active') == 'active']
-    summary = calculate_summary(accounts, active_loans, credit_cards)
-    monthly_req = calculate_monthly_requirement(active_loans, credit_cards)
-    debts = normalize_debts(active_loans, credit_cards)
+    active_cc_loans = [l for l in cc_loans if getattr(l, 'status', 'active') == 'active']
     
-    # Calculate potential extra payment from loans
+    summary = calculate_summary(accounts, active_loans, credit_cards, active_cc_loans)
+    monthly_req = calculate_monthly_requirement(active_loans, credit_cards, active_cc_loans)
+    debts = normalize_debts(active_loans, credit_cards, active_cc_loans)
+    
     extra_payment = sum(loan.extra_payment for loan in active_loans if getattr(loan, 'extra_payment', 0)) if active_loans else 0.0
     action_plan = generate_action_plan(debts, extra_payment)
-    alerts = generate_alerts(active_loans, credit_cards)
+    alerts = generate_alerts(active_loans, credit_cards, active_cc_loans)
     
     # This Month Stats
     now = datetime.now()
