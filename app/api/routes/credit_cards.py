@@ -28,3 +28,34 @@ def create_credit_card(
     db.commit()
     db.refresh(db_card)
     return db_card
+@router.put("/{card_id}", response_model=CreditCardSchema)
+def update_credit_card(
+    card_id: int,
+    card: CreditCardCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_card = db.query(CreditCard).filter(CreditCard.id == card_id, CreditCard.user_id == current_user.id).first()
+    if not db_card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    for key, value in card.dict().items():
+        setattr(db_card, key, value)
+    
+    db.commit()
+    db.refresh(db_card)
+    return db_card
+
+@router.delete("/{card_id}")
+def delete_credit_card(
+    card_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_card = db.query(CreditCard).filter(CreditCard.id == card_id, CreditCard.user_id == current_user.id).first()
+    if not db_card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    db.delete(db_card)
+    db.commit()
+    return {"message": "Card deleted"}
