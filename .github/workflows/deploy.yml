@@ -31,5 +31,5 @@ jobs:
             cd ~/Personal-Finance-Control-System-PFCS/backend
             # Copy secrets from the server's secret folder
             cp ~/secret/backend/.env .env
-            # Try docker compose (v2) first, then fallback to docker-compose
-            (sudo docker compose up --build -d backend) || (sudo docker-compose up --build -d backend)
+            # Build and Restart
+            sudo docker compose up --build -d
