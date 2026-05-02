@@ -16,6 +16,7 @@ class CreditCardLoan(Base):
     interest_type = Column(String, default="yearly") # "yearly" or "monthly"
     emi = Column(Float, default=0.0)
     tenure_months = Column(Integer, default=0)
+    emis_paid = Column(Integer, default=0)
     status = Column(String, default="active") # "active" or "closed"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

@@ -11,6 +11,7 @@ class CreditCardLoanBase(BaseModel):
     interest_type: str = "yearly"
     emi: float
     tenure_months: int
+    emis_paid: int = 0
     status: str = "active"
 
 class CreditCardLoanCreate(CreditCardLoanBase):
