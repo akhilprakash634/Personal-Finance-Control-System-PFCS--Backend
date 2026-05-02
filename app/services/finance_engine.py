@@ -126,10 +126,14 @@ def generate_alerts(loans: List[Any], credit_cards: List[Any], cc_loans: List[An
     
     if credit_cards:
         for card in credit_cards:
+            # Find loans associated with this card
+            card_specific_loans = [l for l in active_cc_loans if l.card_id == card.id]
+            total_card_debt = card.used_amount + sum(l.remaining_amount for l in card_specific_loans)
+            
             if card.limit > 0:
-                utilization = (card.used_amount / card.limit) * 100
+                utilization = (total_card_debt / card.limit) * 100
                 if utilization > 30:
-                    alerts.append(f"High credit utilization ({utilization:.1f}%) on {card.name}.")
+                    alerts.append(f"High credit utilization ({utilization:.1f}%) on {card.name} (includes EMIs).")
             if card.interest_rate > 35:
                 alerts.append(f"High interest debt detected on {card.name} ({card.interest_rate}%).")
                 
