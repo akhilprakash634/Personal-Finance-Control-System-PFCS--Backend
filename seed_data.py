@@ -1,5 +1,8 @@
-from app.db.database import engine, Base, SessionLocal
-from app.models.finance import Account, Loan, CreditCard
+from app.db.session import engine, SessionLocal
+from app.db.base import Base
+from app.models.account import Account
+from app.models.loan import Loan
+from app.models.credit_card import CreditCard
 
 def seed():
     # Make sure tables exist
@@ -21,8 +24,8 @@ def seed():
     db.add_all([a1, a2, a3])
     
     # Add Loans
-    l1 = Loan(name="Car Loan", remaining_amount=450000.0, interest_rate=8.5, emi=12500.0, extra_payment=2500.0, due_date=5)
-    l2 = Loan(name="Personal Loan", remaining_amount=120000.0, interest_rate=14.0, emi=5500.0, extra_payment=0.0, due_date=10)
+    l1 = Loan(name="Car Loan", remaining_amount=450000.0, interest_rate=8.5, emi=12500.0, extra_payment=2500.0, tenure=60, emis_paid=12, due_date=5)
+    l2 = Loan(name="Personal Loan", remaining_amount=120000.0, interest_rate=14.0, emi=5500.0, extra_payment=0.0, tenure=36, emis_paid=6, due_date=10)
     db.add_all([l1, l2])
     
     # Add Credit Cards

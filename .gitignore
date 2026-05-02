@@ -2,3 +2,7 @@
 __pycache__/
 *.pyc
 finance.db
+.env
+.DS_Store
+*.log
+scratch/

@@ -3,3 +3,8 @@ uvicorn
 sqlalchemy
 pydantic
 pydantic-settings
+google-auth
+python-jose[cryptography]
+python-multipart
+requests
+psycopg2-binary
