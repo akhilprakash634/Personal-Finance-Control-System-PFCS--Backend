@@ -4,6 +4,7 @@ from datetime import datetime
 
 class LoanBase(BaseModel):
     name: str
+    total_amount: float
     remaining_amount: float
     interest_rate: float
     interest_type: str = "yearly"

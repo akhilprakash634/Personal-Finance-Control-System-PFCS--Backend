@@ -8,6 +8,7 @@ class Loan(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String, index=True)
+    total_amount = Column(Float, default=0.0)
     remaining_amount = Column(Float, default=0.0)
     interest_rate = Column(Float, default=0.0)
     interest_type = Column(String, default="yearly") # "yearly" or "monthly"
