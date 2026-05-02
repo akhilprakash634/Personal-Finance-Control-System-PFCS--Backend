@@ -27,7 +27,8 @@ def calculate_monthly_requirement(loans: List[Any], credit_cards: List[Any], cc_
     credit_min_due_total = sum(card.minimum_due for card in credit_cards) if credit_cards else 0.0
     credit_card_loan_emi_total = sum(l.emi for l in active_cc_loans) if active_cc_loans else 0.0
     
-    total_required = loan_emi_total + credit_min_due_total + credit_card_loan_emi_total
+    # Total required only includes Loans + CC Min Due (which already includes CC EMIs)
+    total_required = loan_emi_total + credit_min_due_total
     
     return {
         "total_required": round(total_required, 2),
