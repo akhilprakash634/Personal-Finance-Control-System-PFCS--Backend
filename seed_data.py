@@ -2,7 +2,7 @@ from app.db.session import engine, SessionLocal
 from app.db.base import Base
 from app.models.account import Account
 from app.models.loan import Loan
-from app.models.credit_card import CreditCard
+from app.models.credit_card import CreditCard 
 
 def seed():
     # Make sure tables exist
